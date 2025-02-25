@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Arbitrage Bot Admin</title>
+  <style>
+    body {
+      background-color: #000;
+      color: #0f0;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    /* Admin Login Styles */
+    #adminPage {
+      border: 1px solid #0f0;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    #adminPage label {
+      display: inline-block;
+      width: 120px;
+      margin-bottom: 10px;
+    }
+    #adminPage input[type="text"],
+    #adminPage input[type="password"] {
+      width: calc(100% - 130px);
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    #adminPage input[type="submit"] {
+      background-color: #0f0;
+      border: none;
+      color: #000;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    /* Main Page Styles */
+    #mainPage {
+      display: none;
+      border: 1px solid #0f0;
+      padding: 20px;
+    }
+    #credentialsForm label {
+      display: inline-block;
+      width: 220px;
+      margin-bottom: 10px;
+    }
+    #credentialsForm input[type="text"],
+    #credentialsForm input[type="number"] {
+      width: calc(100% - 230px);
+      padding: 5px;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #0f0;
+      border: none;
+      color: #000;
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover, #credentialsForm input[type="submit"]:hover {
+      opacity: 0.8;
+    }
+    #logs {
+      background-color: #111;
+      border: 1px solid #0f0;
+      padding: 10px;
+      margin-top: 20px;
+      height: 300px;
+      overflow-y: scroll;
+      white-space: pre-wrap;
+    }
+  </style>
+  <!-- Include jsrsasign library for JWT generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.18/jsrsasign-all-min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Admin Login Page -->
+    <div id="adminPage">
+      <h1>Admin Login</h1>
+      <form id="loginForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" required><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br>
+        <input type="submit" value="Login">
+      </form>
+      <div id="loginError" style="color:red;"></div>
+    </div>
+    
+    <!-- Main Content Page (shown after login) -->
+    <div id="mainPage">
+      <h1>Arbitrage Bot Admin Page</h1>
+      <!-- Credentials Form (for API keys and parameters; not saved) -->
+      <form id="credentialsForm">
+        <h2>Enter Bot Parameters</h2>
+        <label for="bitmart_api_key">Bitmart API Key:</label>
+        <input type="text" id="bitmart_api_key" name="bitmart_api_key" required><br>
+        
+        <label for="bitmart_api_secret">Bitmart API Secret:</label>
+        <input type="text" id="bitmart_api_secret" name="bitmart_api_secret" required><br>
+        
+        <label for="memo">Memo:</label>
+        <input type="text" id="memo" name="memo" required><br>
+        
+        <label for="mexc_api_key">Mexc API Key:</label>
+        <input type="text" id="mexc_api_key" name="mexc_api_key" required><br>
+        
+        <label for="mexc_api_secret">Mexc API Secret:</label>
+        <input type="text" id="mexc_api_secret" name="mexc_api_secret" required><br>
+        
+        <label for="profit_percentage">Profit Percentage:</label>
+        <input type="number" step="any" id="profit_percentage" name="profit_percentage" required><br>
+        
+        <label for="transaction_fee_percentage">Transaction Fee %:</label>
+        <input type="number" step="any" id="transaction_fee_percentage" name="transaction_fee_percentage" required><br>
+        
+        <label for="desired_deod_price">Desired DEOD Price:</label>
+        <input type="number" step="any" id="desired_deod_price" name="desired_deod_price" required><br>
+        
+        <label for="tokken_name_bit">Token Name (Bit):</label>
+        <input type="text" id="tokken_name_bit" name="tokken_name_bit" required><br>
+        
+        <label for="tokken_name_mex">Token Name (Mexc):</label>
+        <input type="text" id="tokken_name_mex" name="tokken_name_mex" required><br>
+      </form>
+      
+      <!-- Start/Stop Buttons -->
+      <div>
+        <button id="startBtn">Start Bot</button>
+        <button id="stopBtn">Stop Bot</button>
+      </div>
+      
+      <!-- Logs Section -->
+      <div id="logs">Logs will appear here...</div>
+    </div>
+  </div>
+  
+  <script>
+    // -------------------------
+    // Admin Login Logic
+    // -------------------------
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      // Hardcoded admin credentials (for demo purposes)
+      if (username === "admin" && password === "admin123") {
+        document.getElementById("adminPage").style.display = "none";
+        document.getElementById("mainPage").style.display = "block";
+      } else {
+        document.getElementById("loginError").textContent = "Invalid username or password.";
+      }
+    });
+    
+    // -------------------------
+    // Helper Functions for Credentials
+    // -------------------------
+    function getCredentials() {
+      return {
+        bitmart_api_key: document.getElementById("bitmart_api_key").value.trim(),
+        bitmart_api_secret: document.getElementById("bitmart_api_secret").value.trim(),
+        memo: document.getElementById("memo").value.trim(),
+        mexc_api_key: document.getElementById("mexc_api_key").value.trim(),
+        mexc_api_secret: document.getElementById("mexc_api_secret").value.trim(),
+        profit_percentage: parseFloat(document.getElementById("profit_percentage").value),
+        transaction_fee_percentage: parseFloat(document.getElementById("transaction_fee_percentage").value),
+        desired_deod_price: parseFloat(document.getElementById("desired_deod_price").value),
+        tokken_name_bit: document.getElementById("tokken_name_bit").value.trim(),
+        tokken_name_mex: document.getElementById("tokken_name_mex").value.trim()
+      };
+    }
+    
+    function validateCredentials(creds) {
+      return creds.bitmart_api_key && creds.bitmart_api_secret &&
+             creds.memo && creds.mexc_api_key && creds.mexc_api_secret &&
+             !isNaN(creds.profit_percentage) && !isNaN(creds.transaction_fee_percentage) &&
+             !isNaN(creds.desired_deod_price) && creds.tokken_name_bit && creds.tokken_name_mex;
+    }
+    
+    // -------------------------
+    // JWT Generation
+    // -------------------------
+    // JWT signing secret (for demo purposes only; in production, keep this on the server)
+    const jwtSecret = "jay@980"; // Replace with your actual secret key
+
+    function generateJWT(payload) {
+      const header = { alg: "HS256", typ: "JWT" };
+      const sHeader = JSON.stringify(header);
+      const sPayload = JSON.stringify(payload);
+      return KJUR.jws.JWS.sign("HS256", sHeader, sPayload, jwtSecret);
+    }
+    
+    // -------------------------
+    // API Endpoints
+    // -------------------------
+    const baseUrl = "https://arbitarage.decentrawood.com";
+    const startEndpoint = baseUrl + "/start";
+    const stopEndpoint = baseUrl + "/stop";
+    const logsEndpoint = baseUrl + "/logs";
+
+    let logsInterval = null;
+
+    // -------------------------
+    // Bot Control Functions
+    // -------------------------
+    async function startBot() {
+      const creds = getCredentials();
+      if (!validateCredentials(creds)) {
+        appendLog("Please fill in all credentials correctly.");
+        return;
+      }
+      // Generate a JWT token based on the credentials.
+      const token = generateJWT(creds);
+      try {
+        // IMPORTANT: The JSON payload is now the credentials object so that your API code
+        // finds all the required keys. The JWT is sent in the Authorization header.
+        const response = await fetch(startEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(creds)
+        });
+        const data = await response.json();
+        appendLog("Bot started: " + JSON.stringify(data));
+        // Start polling logs every second
+        logsInterval = setInterval(fetchLogs, 1000);
+      } catch (error) {
+        appendLog("Error starting bot: " + error);
+      }
+    }
+    
+    async function stopBot() {
+      const creds = getCredentials();
+      if (!validateCredentials(creds)) {
+        appendLog("Please fill in all credentials correctly.");
+        return;
+      }
+      const token = generateJWT(creds);
+      try {
+        const response = await fetch(stopEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(creds)
+        });
+        const data = await response.json();
+        appendLog("Bot stopped: " + JSON.stringify(data));
+        if (logsInterval) {
+          clearInterval(logsInterval);
+          logsInterval = null;
+        }
+      } catch (error) {
+        appendLog("Error stopping bot: " + error);
+      }
+    }
+    
+    async function fetchLogs() {
+      // For the logs endpoint, we send the JWT in the header.
+      // Depending on your backend implementation, you might not need to send the credentials again.
+      const creds = getCredentials();
+      if (!validateCredentials(creds)) return;
+      const token = generateJWT(creds);
+      try {
+        const response = await fetch(logsEndpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          }
+        });
+        const data = await response.json();
+        appendLog("Logs: " + JSON.stringify(data));
+      } catch (error) {
+        appendLog("Error fetching logs: " + error);
+      }
+    }
+    
+    // -------------------------
+    // Utility: Append Log Messages
+    // -------------------------
+    function appendLog(message) {
+      const logsDiv = document.getElementById("logs");
+      const timestamp = new Date().toLocaleTimeString();
+      logsDiv.textContent += `[${timestamp}] ${message}\n`;
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+    
+    // -------------------------
+    // Event Listeners for Bot Control Buttons
+    // -------------------------
+    document.getElementById("startBtn").addEventListener("click", startBot);
+    document.getElementById("stopBtn").addEventListener("click", stopBot);
+  </script>
+</body>
+</html>
